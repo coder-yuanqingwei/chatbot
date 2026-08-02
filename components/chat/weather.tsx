@@ -3,6 +3,7 @@
 import cx from "classnames";
 import { format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 
 const SunIcon = ({ size = 40 }: { size?: number }) => (
   <svg fill="none" height={size} viewBox="0 0 24 24" width={size}>
@@ -283,19 +284,8 @@ export function Weather({
 }: {
   weatherAtLocation?: WeatherAtLocation;
 }) {
-  const currentHigh = Math.max(
-    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24)
-  );
-  const currentLow = Math.min(
-    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24)
-  );
-
-  const isDay = isWithinInterval(new Date(weatherAtLocation.current.time), {
-    end: new Date(weatherAtLocation.daily.sunset[0]),
-    start: new Date(weatherAtLocation.daily.sunrise[0]),
-  });
-
   const [isMobile, setIsMobile] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     const handleResize = () => {
@@ -307,6 +297,41 @@ export function Weather({
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Handle error responses from the weather tool
+  if (
+    !weatherAtLocation ||
+    "error" in weatherAtLocation ||
+    !weatherAtLocation.hourly ||
+    !weatherAtLocation.current ||
+    !weatherAtLocation.daily
+  ) {
+    const errorMessage =
+      weatherAtLocation && "error" in weatherAtLocation
+        ? (weatherAtLocation as { error: string }).error
+        : "Weather data is currently unavailable.";
+
+    return (
+      <div className="flex w-full flex-col gap-3 rounded-2xl border border-muted p-4 shadow-lg">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <CloudIcon size={24} />
+          <span className="text-sm">{errorMessage}</span>
+        </div>
+      </div>
+    );
+  }
+
+  const currentHigh = Math.max(
+    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24)
+  );
+  const currentLow = Math.min(
+    ...weatherAtLocation.hourly.temperature_2m.slice(0, 24)
+  );
+
+  const isDay = isWithinInterval(new Date(weatherAtLocation.current.time), {
+    end: new Date(weatherAtLocation.daily.sunset[0]),
+    start: new Date(weatherAtLocation.daily.sunrise[0]),
+  });
 
   const hoursToShow = isMobile ? 5 : 6;
 
@@ -397,7 +422,9 @@ export function Weather({
                   key={time}
                 >
                   <div className="font-medium text-white/70 text-xs">
-                    {index === 0 ? "Now" : format(hourTime, "ha")}
+                    {index === 0
+                      ? t("chat.weather.now")
+                      : format(hourTime, "ha")}
                   </div>
 
                   <div

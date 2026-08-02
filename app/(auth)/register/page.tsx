@@ -7,6 +7,7 @@ import { useActionState, useEffect, useState } from "react";
 import { AuthForm } from "@/components/chat/auth-form";
 import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
+import { useI18n } from "@/hooks/use-i18n";
 import { type RegisterActionState, register } from "../actions";
 
 export default function Page() {
@@ -19,21 +20,22 @@ export default function Page() {
     { status: "idle" }
   );
 
+  const { t } = useI18n();
   const { update: updateSession } = useSession();
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
     if (state.status === "user_exists") {
-      toast({ description: "Account already exists!", type: "error" });
+      toast({ description: t("accountExists"), type: "error" });
     } else if (state.status === "failed") {
-      toast({ description: "Failed to create account!", type: "error" });
+      toast({ description: t("createAccountFailed"), type: "error" });
     } else if (state.status === "invalid_data") {
       toast({
-        description: "Failed validating your submission!",
+        description: t("validationFailed"),
         type: "error",
       });
     } else if (state.status === "success") {
-      toast({ description: "Account created!", type: "success" });
+      toast({ description: t("accountCreated"), type: "success" });
       setIsSuccessful(true);
       updateSession();
       router.refresh();
@@ -47,17 +49,19 @@ export default function Page() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
-      <p className="text-sm text-muted-foreground">Get started for free</p>
+      <h1 className="text-2xl font-semibold tracking-tight">
+        {t("createAccount")}
+      </h1>
+      <p className="text-sm text-muted-foreground">{t("getStartedFree")}</p>
       <AuthForm action={handleSubmit} defaultEmail={email}>
-        <SubmitButton isSuccessful={isSuccessful}>Sign up</SubmitButton>
+        <SubmitButton isSuccessful={isSuccessful}>{t("signUp")}</SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
-          {"Have an account? "}
+          {t("haveAccount")}
           <Link
             className="text-foreground underline-offset-4 hover:underline"
             href="/login"
           >
-            Sign in
+            {t("signIn")}
           </Link>
         </p>
       </AuthForm>

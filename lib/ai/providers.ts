@@ -1,6 +1,6 @@
-import { customProvider, gateway } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { customProvider } from "ai";
 import { isTestEnvironment } from "../constants";
-import { titleModel } from "./models";
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -17,17 +17,26 @@ export const myProvider = isTestEnvironment
     })()
   : null;
 
+// DeepSeek provider - direct API access via OpenAI-compatible endpoint
+const deepseek = createOpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY ?? "",
+  baseURL: "https://api.deepseek.com/v1",
+});
+
 export function getLanguageModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
   }
 
-  return gateway.languageModel(modelId);
+  // Use DeepSeek v4-flash for all models
+  return deepseek("deepseek-v4-flash");
 }
 
 export function getTitleModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }
-  return gateway.languageModel(titleModel.id);
+
+  // Use DeepSeek v4-flash for title generation
+  return deepseek("deepseek-v4-flash");
 }

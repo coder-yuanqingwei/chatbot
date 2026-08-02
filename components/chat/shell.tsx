@@ -17,6 +17,7 @@ import {
   useArtifact,
   useArtifactSelector,
 } from "@/hooks/use-artifact";
+import { useI18n } from "@/lib/i18n/provider";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Artifact } from "./artifact";
@@ -48,6 +49,7 @@ export function ChatShell() {
     setShowCreditCardAlert,
   } = useActiveChat();
 
+  const { t } = useI18n();
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(
     null
   );
@@ -196,17 +198,15 @@ export function ChatShell() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Activate AI Gateway</AlertDialogTitle>
+            <AlertDialogTitle>{t("common.activate_gateway")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This application requires{" "}
-              {process.env.NODE_ENV === "production" ? "the owner" : "you"} to
-              activate Vercel AI Gateway.
+              {t("common.activate_gateway_desc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleActivateGateway}>
-              Activate
+              {t("common.activate")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

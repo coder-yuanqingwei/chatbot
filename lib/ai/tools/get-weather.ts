@@ -6,7 +6,7 @@ async function geocodeCity(
 ): Promise<{ latitude: number; longitude: number } | null> {
   try {
     const response = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=zh&format=json`
     );
 
     if (!response.ok) {
@@ -16,7 +16,22 @@ async function geocodeCity(
     const data = await response.json();
 
     if (!data.results || data.results.length === 0) {
-      return null;
+      // Retry with English language for fallback
+      const fallbackResponse = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`
+      );
+      if (!fallbackResponse.ok) {
+        return null;
+      }
+      const fallbackData = await fallbackResponse.json();
+      if (!fallbackData.results || fallbackData.results.length === 0) {
+        return null;
+      }
+      const [fallbackResult] = fallbackData.results;
+      return {
+        latitude: fallbackResult.latitude,
+        longitude: fallbackResult.longitude,
+      };
     }
 
     const [result] = data.results;

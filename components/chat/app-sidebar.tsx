@@ -32,6 +32,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useI18n } from "@/lib/i18n/provider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +50,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { setOpenMobile, toggleSidebar } = useSidebar();
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const { t } = useI18n();
 
   const closeMobile = useCallback(() => {
     setOpenMobile(false);
@@ -78,8 +80,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       method: "DELETE",
     });
 
-    toast.success("All chats deleted");
-  }, [mutate, router]);
+    toast.success(t("chat.slash.all_chats_deleted"));
+  }, [mutate, router, t]);
 
   return (
     <>
@@ -107,7 +109,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     </SidebarMenuButton>
                   </TooltipTrigger>
                   <TooltipContent className="hidden md:block" side="right">
-                    Open sidebar
+                    {t("sidebar.settings")}
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -125,10 +127,10 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                   <SidebarMenuButton
                     className="h-8 rounded-lg border border-sidebar-border text-[13px] text-sidebar-foreground/70 transition-colors duration-150 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                     onClick={handleNewChat}
-                    tooltip="New Chat"
+                    tooltip={t("sidebar.new_chat")}
                   >
                     <PenSquareIcon className="size-4" />
-                    <span className="font-medium">New chat</span>
+                    <span className="font-medium">{t("sidebar.new_chat")}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {user ? (
@@ -136,10 +138,12 @@ export function AppSidebar({ user }: { user: User | undefined }) {
                     <SidebarMenuButton
                       className="rounded-lg text-sidebar-foreground/40 transition-colors duration-150 hover:bg-destructive/10 hover:text-destructive"
                       onClick={handleShowDeleteAllDialog}
-                      tooltip="Delete All Chats"
+                      tooltip={t("chat.slash.delete_all_confirm")}
                     >
                       <TrashIcon className="size-4" />
-                      <span className="text-[13px]">Delete all</span>
+                      <span className="text-[13px]">
+                        {t("chat.slash.delete_all_button")}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ) : null}
@@ -160,16 +164,17 @@ export function AppSidebar({ user }: { user: User | undefined }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete all chats?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("chat.slash.delete_all_confirm")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all
-              your chats and remove them from our servers.
+              {t("chat.slash.delete_all_warning")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteAll}>
-              Delete All
+              {t("chat.slash.delete_all_button")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

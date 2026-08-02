@@ -43,6 +43,7 @@ import {
   DEFAULT_CHAT_MODEL,
   type ModelCapabilities,
 } from "@/lib/ai/models";
+import { useI18n } from "@/lib/i18n/provider";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -110,6 +111,7 @@ function PureMultimodalInput({
   isLoading?: boolean;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const { setTheme, resolvedTheme } = useTheme();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
@@ -175,7 +177,7 @@ function PureMultimodalInput({
           setMessages(() => []);
           break;
         case "rename":
-          toast("Rename is available from the sidebar chat menu.");
+          toast(t("chat.slash.rename_toast"));
           break;
         case "model": {
           const modelBtn = document.querySelector<HTMLButtonElement>(
@@ -188,24 +190,24 @@ function PureMultimodalInput({
           setTheme(resolvedTheme === "dark" ? "light" : "dark");
           break;
         case "delete":
-          toast("Delete this chat?", {
+          toast(t("chat.slash.delete_confirm"), {
             action: {
-              label: "Delete",
+              label: t("chat.slash.delete_button"),
               onClick: () => {
                 fetch(
                   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatId}`,
                   { method: "DELETE" }
                 );
                 router.push("/");
-                toast.success("Chat deleted");
+                toast.success(t("chat.slash.chat_deleted"));
               },
             },
           });
           break;
         case "purge":
-          toast("Delete all chats?", {
+          toast(t("chat.slash.delete_all_confirm"), {
             action: {
-              label: "Delete all",
+              label: t("chat.slash.delete_all_button"),
               onClick: () => {
                 fetch(
                   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`,
@@ -214,7 +216,7 @@ function PureMultimodalInput({
                   }
                 );
                 router.push("/");
-                toast.success("All chats deleted");
+                toast.success(t("chat.slash.all_chats_deleted"));
               },
             },
           });
@@ -223,7 +225,7 @@ function PureMultimodalInput({
           break;
       }
     },
-    [chatId, resolvedTheme, router, setInput, setMessages, setTheme]
+    [chatId, resolvedTheme, router, setInput, setMessages, setTheme, t]
   );
 
   const submitForm = useCallback(() => {
@@ -267,35 +269,38 @@ function PureMultimodalInput({
     chatId,
   ]);
 
-  const uploadFile = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
+  const uploadFile = useCallback(
+    async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/files/upload`,
-        {
-          body: formData,
-          method: "POST",
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/files/upload`,
+          {
+            body: formData,
+            method: "POST",
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const { url, pathname, contentType } = data;
+
+          return {
+            contentType,
+            name: pathname,
+            url,
+          };
         }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const { url, pathname, contentType } = data;
-
-        return {
-          contentType,
-          name: pathname,
-          url,
-        };
+        const { error } = await response.json();
+        toast.error(error);
+      } catch {
+        toast.error(t("chat.input.upload_failed"));
       }
-      const { error } = await response.json();
-      toast.error(error);
-    } catch {
-      toast.error("Failed to upload file, please try again!");
-    }
-  }, []);
+    },
+    [t]
+  );
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -315,12 +320,12 @@ function PureMultimodalInput({
           ...successfullyUploadedAttachments,
         ]);
       } catch {
-        toast.error("Failed to upload files");
+        toast.error(t("chat.input.upload_files_failed"));
       } finally {
         setUploadQueue([]);
       }
     },
-    [setAttachments, uploadFile]
+    [setAttachments, uploadFile, t]
   );
 
   const handlePaste = useCallback(
@@ -361,12 +366,12 @@ function PureMultimodalInput({
           ...(successfullyUploadedAttachments as Attachment[]),
         ]);
       } catch {
-        toast.error("Failed to upload pasted image(s)");
+        toast.error(t("chat.input.upload_image_failed"));
       } finally {
         setUploadQueue([]);
       }
     },
-    [setAttachments, uploadFile]
+    [setAttachments, uploadFile, t]
   );
 
   useEffect(() => {
@@ -538,7 +543,9 @@ function PureMultimodalInput({
           onChange={handleInput}
           onKeyDown={handleTextareaKeyDown}
           placeholder={
-            editingMessage ? "Edit your message..." : "Ask anything..."
+            editingMessage
+              ? t("chat.input.edit_placeholder")
+              : t("chat.input.placeholder")
           }
           ref={textareaRef}
           value={input}
@@ -791,6 +798,7 @@ function PureModelSelectorCompact({
   onModelChange?: (modelId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
   const { data: modelsData } = useSWR(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
     (url: string) => fetch(url).then((r) => r.json()),
@@ -821,7 +829,7 @@ function PureModelSelectorCompact({
         </Button>
       </ModelSelectorTrigger>
       <ModelSelectorContent commandDefaultValue={selectedModel.id}>
-        <ModelSelectorInput placeholder="Search models..." />
+        <ModelSelectorInput placeholder={t("chat.input.search_models")} />
         <ModelSelectorList>
           {(() => {
             const curatedIds = new Set(chatModels.map((m) => m.id));

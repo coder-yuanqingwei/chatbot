@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
+import { useI18n } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import {
   CheckCircleFillIcon,
@@ -33,16 +34,16 @@ const visibilities: Array<{
   icon: ReactNode;
 }> = [
   {
-    description: "Only you can access this chat",
+    description: "chat.visibility.private_desc",
     icon: <LockIcon />,
     id: "private",
-    label: "Private",
+    label: "chat.visibility.private",
   },
   {
-    description: "Anyone with the link can access this chat",
+    description: "chat.visibility.public_desc",
     icon: <GlobeIcon />,
     id: "public",
-    label: "Public",
+    label: "chat.visibility.public",
   },
 ];
 
@@ -57,6 +58,7 @@ function VisibilitySelectorItem({
   visibility: (typeof visibilities)[number];
   visibilityType: VisibilityType;
 }) {
+  const { t } = useI18n();
   const handleSelect = useCallback(() => {
     setVisibilityType(visibility.id);
     setOpen(false);
@@ -70,10 +72,10 @@ function VisibilitySelectorItem({
       onSelect={handleSelect}
     >
       <div className="flex flex-col items-start gap-1">
-        {visibility.label}
+        {t(visibility.label)}
         {visibility.description ? (
           <div className="text-muted-foreground text-xs">
-            {visibility.description}
+            {t(visibility.description)}
           </div>
         ) : null}
       </div>
@@ -93,6 +95,7 @@ export function VisibilitySelector({
   selectedVisibilityType: VisibilityType;
 } & React.ComponentProps<typeof Button>) {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
 
   const { visibilityType, setVisibilityType } = useChatVisibility({
     chatId,
@@ -120,7 +123,9 @@ export function VisibilitySelector({
           variant="outline"
         >
           {selectedVisibility?.icon}
-          <span className="md:sr-only">{selectedVisibility?.label}</span>
+          <span className="md:sr-only">
+            {t(selectedVisibility?.label ?? "chat.visibility.private")}
+          </span>
           <ChevronDownIcon />
         </Button>
       </DropdownMenuTrigger>

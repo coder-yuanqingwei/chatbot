@@ -1,5 +1,6 @@
 import { memo, type ReactNode, useCallback, useState } from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { artifactDefinitions, type UIArtifact } from "./artifact";
@@ -34,17 +35,19 @@ function ArtifactActionButton({
   isActive: boolean;
   setIsLoading: (isLoading: boolean) => void;
 }) {
+  const { t } = useI18n();
+
   const handleClick = useCallback(async () => {
     setIsLoading(true);
 
     try {
       await Promise.resolve(action.onClick(actionContext));
     } catch {
-      toast.error("Failed to execute action");
+      toast.error(t("chat.artifact.action_failed"));
     } finally {
       setIsLoading(false);
     }
-  }, [action, actionContext, setIsLoading]);
+  }, [action, actionContext, setIsLoading, t]);
 
   return (
     <Tooltip>

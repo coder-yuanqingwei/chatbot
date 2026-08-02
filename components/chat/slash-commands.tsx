@@ -10,6 +10,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef } from "react";
+import { useI18n } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 
 export type SlashCommand = {
@@ -23,43 +24,43 @@ export type SlashCommand = {
 export const slashCommands: SlashCommand[] = [
   {
     action: "new",
-    description: "Start a new chat",
+    description: "chat.slash.new_chat_desc",
     icon: <PenSquareIcon className="size-3.5" />,
     name: "new",
   },
   {
     action: "clear",
-    description: "Clear current chat",
+    description: "chat.slash.clear_current",
     icon: <Trash2Icon className="size-3.5" />,
     name: "clear",
   },
   {
     action: "rename",
-    description: "Rename current chat",
+    description: "chat.slash.rename_current",
     icon: <PenLineIcon className="size-3.5" />,
     name: "rename",
   },
   {
     action: "model",
-    description: "Change the AI model",
+    description: "chat.slash.model_desc",
     icon: <ListIcon className="size-3.5" />,
     name: "model",
   },
   {
     action: "theme",
-    description: "Toggle dark/light mode",
+    description: "chat.slash.theme_desc",
     icon: <PaletteIcon className="size-3.5" />,
     name: "theme",
   },
   {
     action: "delete",
-    description: "Delete current chat",
+    description: "chat.slash.delete_current",
     icon: <XIcon className="size-3.5" />,
     name: "delete",
   },
   {
     action: "purge",
-    description: "Delete all chats",
+    description: "chat.slash.delete_all_confirm",
     icon: <BombIcon className="size-3.5" />,
     name: "purge",
   },
@@ -83,6 +84,8 @@ function SlashCommandMenuItem({
   onSelect: (command: SlashCommand) => void;
   selectedIndex: number;
 }) {
+  const { t } = useI18n();
+
   const handleClick = useCallback(() => {
     onSelect(cmd);
   }, [cmd, onSelect]);
@@ -110,7 +113,7 @@ function SlashCommandMenuItem({
       </div>
       <span className="font-mono text-[13px] text-foreground">/{cmd.name}</span>
       <span className="text-[12px] text-muted-foreground/50">
-        {cmd.description}
+        {t(cmd.description)}
       </span>
       {cmd.shortcut ? (
         <span className="ml-auto text-[11px] text-muted-foreground/30">
@@ -127,6 +130,7 @@ export function SlashCommandMenu({
   onClose: _onClose,
   selectedIndex,
 }: SlashCommandMenuProps) {
+  const { t } = useI18n();
   const menuRef = useRef<HTMLDivElement>(null);
   const filtered = slashCommands.filter((cmd) =>
     cmd.name.startsWith(query.toLowerCase())
@@ -149,7 +153,7 @@ export function SlashCommandMenu({
       ref={menuRef}
     >
       <div className="px-4 py-2.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/40">
-        Commands
+        {t("chat.slash.commands")}
       </div>
       <div className="max-h-64 overflow-y-auto pb-1 no-scrollbar">
         {filtered.map((cmd, index) => (

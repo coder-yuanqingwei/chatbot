@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { suggestions } from "@/lib/constants";
+import { suggestionKeys } from "@/lib/constants";
+import { useI18n } from "@/lib/i18n/provider";
 import { SparklesIcon } from "./icons";
 
 function PreviewSuggestionButton({
@@ -29,6 +30,8 @@ function PreviewSuggestionButton({
 
 export function Preview() {
   const router = useRouter();
+  const { t } = useI18n();
+  const suggestions = suggestionKeys.map((key) => t(key));
 
   const handleAction = useCallback(
     (query?: string) => {
@@ -54,10 +57,10 @@ export function Preview() {
       <div className="flex flex-1 flex-col items-center justify-center gap-8 px-8">
         <div className="text-center">
           <h2 className="text-xl font-semibold tracking-tight">
-            What can I help with?
+            {t("chat.greeting.title")}
           </h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Ask a question, write code, or explore ideas.
+            {t("chat.greeting.subtitle")}
           </p>
         </div>
 
@@ -78,7 +81,7 @@ export function Preview() {
           onClick={handleDefaultAction}
           type="button"
         >
-          Ask anything...
+          {t("chat.input.placeholder")}
         </button>
       </div>
     </div>

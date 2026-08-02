@@ -19,6 +19,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { guestRegex } from "@/lib/constants";
+import { useI18n } from "@/lib/i18n/provider";
 import { LoaderIcon } from "./icons";
 import { toast } from "./toast";
 
@@ -32,6 +33,7 @@ function emailToHue(email: string): number {
 
 export function SidebarUserNav({ user }: { user: User }) {
   const router = useRouter();
+  const { t } = useI18n();
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
 
@@ -43,7 +45,7 @@ export function SidebarUserNav({ user }: { user: User }) {
   const handleAuthClick = useCallback(() => {
     if (status === "loading") {
       toast({
-        description: "Checking authentication status, please try again!",
+        description: t("sidebar.checking_auth"),
         type: "error",
       });
 
@@ -57,7 +59,7 @@ export function SidebarUserNav({ user }: { user: User }) {
         redirectTo: "/",
       });
     }
-  }, [isGuest, router, status]);
+  }, [isGuest, router, status, t]);
 
   return (
     <SidebarMenu>
@@ -69,7 +71,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                 <div className="flex flex-row items-center gap-2">
                   <div className="size-6 animate-pulse rounded-full bg-sidebar-foreground/10" />
                   <span className="animate-pulse rounded-md bg-sidebar-foreground/10 text-transparent text-[13px]">
-                    Loading...
+                    {t("common.loading")}...
                   </span>
                 </div>
                 <div className="animate-spin text-sidebar-foreground/50">
@@ -88,7 +90,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                   }}
                 />
                 <span className="truncate text-[13px]" data-testid="user-email">
-                  {isGuest ? "Guest" : user?.email}
+                  {isGuest ? t("sidebar.guest") : user?.email}
                 </span>
                 <ChevronUp className="ml-auto size-3.5 text-sidebar-foreground/50" />
               </SidebarMenuButton>
@@ -104,7 +106,7 @@ export function SidebarUserNav({ user }: { user: User }) {
               data-testid="user-nav-item-theme"
               onSelect={handleThemeSelect}
             >
-              {`Toggle ${resolvedTheme === "light" ? "dark" : "light"} mode`}
+              {`${t("sidebar.toggle_theme")} ${resolvedTheme === "light" ? t("sidebar.dark") : t("sidebar.light")} ${t("sidebar.mode")}`}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild data-testid="user-nav-item-auth">
@@ -113,7 +115,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                 onClick={handleAuthClick}
                 type="button"
               >
-                {isGuest ? "Login to your account" : "Sign out"}
+                {isGuest ? t("sidebar.login") : t("sidebar.sign_out")}
               </button>
             </DropdownMenuItem>
           </DropdownMenuContent>

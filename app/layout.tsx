@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { I18nProvider } from "@/lib/i18n/provider";
 
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
@@ -56,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       className={`${geist.variable} ${geistMono.variable}`}
-      lang="en"
+      lang="zh"
       suppressHydrationWarning
     >
       <head>
@@ -77,7 +78,9 @@ export default function RootLayout({
           <SessionProvider
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
           >
-            <TooltipProvider>{children}</TooltipProvider>
+            <I18nProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+            </I18nProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>

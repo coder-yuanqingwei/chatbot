@@ -1,22 +1,23 @@
 import { memo, useCallback } from "react";
 import { toast } from "sonner";
 import { useArtifact } from "@/hooks/use-artifact";
+import { useI18n } from "@/lib/i18n/provider";
 import type { ArtifactKind } from "./artifact";
 import { FileIcon, LoaderIcon, MessageIcon, PencilEditIcon } from "./icons";
 
-const getActionText = (
+const getActionKey = (
   type: "create" | "update" | "request-suggestions",
   tense: "present" | "past"
 ) => {
   switch (type) {
     case "create":
-      return tense === "present" ? "Creating" : "Created";
+      return tense === "present" ? "chat.doc.creating" : "chat.doc.created";
     case "update":
-      return tense === "present" ? "Updating" : "Updated";
+      return tense === "present" ? "chat.doc.updating" : "chat.doc.updated";
     case "request-suggestions":
       return tense === "present"
-        ? "Adding suggestions"
-        : "Added suggestions to";
+        ? "chat.doc.adding_suggestions"
+        : "chat.doc.added_suggestions";
     default:
       return null;
   }
@@ -34,12 +35,11 @@ function PureDocumentToolResult({
   isReadonly,
 }: DocumentToolResultProps) {
   const { setArtifact } = useArtifact();
+  const { t } = useI18n();
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       if (isReadonly) {
-        toast.error(
-          "Viewing files in shared chats is currently not supported."
-        );
+        toast.error(t("chat.doc.shared_not_supported"));
         return;
       }
 
@@ -62,7 +62,7 @@ function PureDocumentToolResult({
         title: result.title,
       }));
     },
-    [isReadonly, result, setArtifact]
+    [isReadonly, result, setArtifact, t]
   );
 
   return (
@@ -81,7 +81,7 @@ function PureDocumentToolResult({
         ) : null}
       </div>
       <div className="text-left">
-        {`${getActionText(type, "past")} "${result.title}"`}
+        {`${t(getActionKey(type, "past") || "")} "${result.title}"`}
       </div>
     </button>
   );
@@ -97,19 +97,17 @@ type DocumentToolCallProps = {
     | { documentId: string };
   isReadonly: boolean;
 };
-
 function PureDocumentToolCall({
   type,
   args,
   isReadonly,
 }: DocumentToolCallProps) {
   const { setArtifact } = useArtifact();
+  const { t } = useI18n();
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       if (isReadonly) {
-        toast.error(
-          "Viewing files in shared chats is currently not supported."
-        );
+        toast.error(t("chat.doc.shared_not_supported"));
         return;
       }
 
@@ -128,7 +126,7 @@ function PureDocumentToolCall({
         isVisible: true,
       }));
     },
-    [isReadonly, setArtifact]
+    [isReadonly, setArtifact, t]
   );
 
   return (
@@ -149,13 +147,13 @@ function PureDocumentToolCall({
         </div>
 
         <div className="text-left">
-          {`${getActionText(type, "present")} ${
+          {`${t(getActionKey(type, "present") || "")} ${
             type === "create" && "title" in args && args.title
               ? `"${args.title}"`
               : type === "update" && "description" in args
                 ? `"${args.description}"`
                 : type === "request-suggestions"
-                  ? "for document"
+                  ? t("chat.doc.for_document")
                   : ""
           }`}
         </div>

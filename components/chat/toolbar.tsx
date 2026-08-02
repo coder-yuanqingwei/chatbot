@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useI18n } from "@/lib/i18n/provider";
 import type { ChatMessage } from "@/lib/types";
 import { type ArtifactKind, artifactDefinitions } from "./artifact";
 import type { ArtifactToolbarItem } from "./create-artifact";
@@ -64,6 +65,7 @@ const Tool = ({
   onClick,
 }: ToolProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (selectedTool !== description) {
@@ -151,7 +153,7 @@ const Tool = ({
         side="left"
         sideOffset={16}
       >
-        {description}
+        {t(description)}
       </TooltipContent>
     </Tooltip>
   );
@@ -305,7 +307,7 @@ const createFixErrorTool = (
   consoleOutput: string,
   documentId?: string
 ): ArtifactToolbarItem => ({
-  description: "Fix error",
+  description: "chat.artifact.fix_error",
   icon: <WrenchIcon className="size-4" />,
   onClick: ({ sendMessage: send }) => {
     send({

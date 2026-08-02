@@ -195,7 +195,7 @@ export async function POST(request: Request) {
     }
 
     const modelConfig = chatModels.find((m) => m.id === chatModel);
-    const modelCapabilities = await getCapabilities();
+    const modelCapabilities = getCapabilities();
     const capabilities = modelCapabilities[chatModel];
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
@@ -236,20 +236,15 @@ export async function POST(request: Request) {
         writeWaitingStatus("waiting", "Waiting...");
 
         healthCheckTimer = setTimeout(() => {
-          getModelAvailability(chatModel)
-            .then((availability) => {
-              if (availability === "impacted") {
-                writeWaitingStatus(
-                  "health",
-                  `${modelName} may be slow or unavailable right now...`
-                );
-              } else {
-                writeWaitingStatus("still-waiting", "Still waiting...");
-              }
-            })
-            .catch(() => {
-              writeWaitingStatus("still-waiting", "Still waiting...");
-            });
+          const availability = getModelAvailability(chatModel);
+          if (availability === "impacted") {
+            writeWaitingStatus(
+              "health",
+              `${modelName} may be slow or unavailable right now...`
+            );
+          } else {
+            writeWaitingStatus("still-waiting", "Still waiting...");
+          }
         }, HEALTH_CHECK_DELAY_MS);
 
         const markModelActive = () => {
@@ -295,9 +290,6 @@ export async function POST(request: Request) {
             stopWaitingStatus();
           },
           providerOptions: {
-            ...(modelConfig?.gatewayOrder && {
-              gateway: { order: modelConfig.gatewayOrder },
-            }),
             ...(modelConfig?.reasoningEffort && {
               openai: { reasoningEffort: modelConfig.reasoningEffort },
             }),

@@ -3,6 +3,7 @@
 import { useFormStatus } from "react-dom";
 
 import { LoaderIcon } from "@/components/chat/icons";
+import { useI18n } from "@/lib/i18n/provider";
 
 import { Button } from "../ui/button";
 
@@ -14,6 +15,7 @@ export function SubmitButton({
   isSuccessful: boolean;
 }) {
   const { pending } = useFormStatus();
+  const { t } = useI18n();
 
   return (
     <Button
@@ -31,7 +33,7 @@ export function SubmitButton({
       ) : null}
 
       <output aria-live="polite" className="sr-only">
-        {pending || isSuccessful ? "Loading" : "Submit form"}
+        {pending || isSuccessful ? t("common.loading") : t("common.submit")}
       </output>
     </Button>
   );

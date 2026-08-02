@@ -8,6 +8,7 @@ import { useCallback, useState } from "react";
 import { useSWRConfig } from "swr";
 import { useArtifact } from "@/hooks/use-artifact";
 import type { Document } from "@/lib/db/schema";
+import { useI18n } from "@/lib/i18n/provider";
 import { cn, getDocumentTimestampByIndex } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
 
@@ -27,6 +28,7 @@ export const VersionFooter = ({
   setMode,
 }: VersionFooterProps) => {
   const { artifact } = useArtifact();
+  const { t } = useI18n();
 
   const { mutate } = useSWRConfig();
   const [isMutating, setIsMutating] = useState(false);
@@ -135,7 +137,7 @@ export const VersionFooter = ({
             mode === "diff" && "bg-muted text-foreground"
           )}
           onClick={handleToggleMode}
-          title="Show changes"
+          title={t("chat.artifact.show_changes")}
           type="button"
         >
           <DiffIcon className="size-4" />

@@ -3,7 +3,8 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { motion } from "framer-motion";
 import { memo, useCallback } from "react";
-import { suggestions } from "@/lib/constants";
+import { suggestionKeys } from "@/lib/constants";
+import { useI18n } from "@/lib/i18n/provider";
 import type { ChatMessage } from "@/lib/types";
 import { Suggestion } from "../ai-elements/suggestion";
 import type { VisibilityType } from "./visibility-selector";
@@ -15,7 +16,8 @@ type SuggestedActionsProps = {
 };
 
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
-  const suggestedActions = suggestions;
+  const { t } = useI18n();
+  const suggestedActions = suggestionKeys.map((key) => t(key));
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
       window.history.pushState(
