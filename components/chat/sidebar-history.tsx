@@ -80,14 +80,17 @@ const groupChatsByDate = (chats: Chat[]): GroupedChats => {
 
 export function getChatHistoryPaginationKey(
   pageIndex: number,
-  previousPageData: ChatHistory
+  previousPageData: ChatHistory,
+  sessionType?: "chat" | "debate" | "roundtable" | "detective"
 ) {
   if (previousPageData && previousPageData.hasMore === false) {
     return null;
   }
 
+  const typeParam = sessionType ? `&session_type=${sessionType}` : "";
+
   if (pageIndex === 0) {
-    return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=${PAGE_SIZE}`;
+    return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=${PAGE_SIZE}${typeParam}`;
   }
 
   const firstChatFromPage = previousPageData.chats.at(-1);
@@ -96,14 +99,26 @@ export function getChatHistoryPaginationKey(
     return null;
   }
 
-  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
+  return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}${typeParam}`;
 }
 
-export function SidebarHistory({ user }: { user: User | undefined }) {
+export function SidebarHistory({
+  user,
+  sessionType,
+}: {
+  user: User | undefined;
+  sessionType?: "chat" | "debate" | "roundtable" | "detective";
+}) {
   const { t } = useI18n();
   const { setOpenMobile } = useSidebar();
   const pathname = usePathname();
   const id = pathname?.startsWith("/chat/") ? pathname.split("/")[2] : null;
+
+  const getKey = useCallback(
+    (pageIndex: number, previousPageData: ChatHistory) =>
+      getChatHistoryPaginationKey(pageIndex, previousPageData, sessionType),
+    [sessionType]
+  );
 
   const {
     data: paginatedChatHistories,
@@ -111,11 +126,12 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
     isValidating,
     isLoading,
     mutate,
-  } = useSWRInfinite<ChatHistory>(
-    user ? getChatHistoryPaginationKey : () => null,
-    fetcher,
-    { fallbackData: [], revalidateOnFocus: false }
-  );
+  } = useSWRInfinite<ChatHistory>(user ? getKey : () => null, fetcher, {
+    fallbackData: [],
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  });
 
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -331,7 +347,10 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
               : null}
           </SidebarMenu>
 
-          <motion.div onViewportEnter={handleViewportEnter} />
+          <motion.div
+            className="h-1 w-full"
+            onViewportEnter={handleViewportEnter}
+          />
 
           {hasReachedEnd ? null : (
             <div className="mt-1 flex flex-row items-center gap-2 px-4 py-2 text-sidebar-foreground/50">

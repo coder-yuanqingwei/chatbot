@@ -12,6 +12,14 @@ export async function GET(request: NextRequest) {
   );
   const startingAfter = searchParams.get("starting_after");
   const endingBefore = searchParams.get("ending_before");
+  const sessionTypeParam = searchParams.get("session_type");
+  const sessionType =
+    sessionTypeParam === "chat" ||
+    sessionTypeParam === "debate" ||
+    sessionTypeParam === "roundtable" ||
+    sessionTypeParam === "detective"
+      ? sessionTypeParam
+      : undefined;
 
   if (startingAfter && endingBefore) {
     return new ChatbotError(
@@ -30,6 +38,7 @@ export async function GET(request: NextRequest) {
     endingBefore,
     id: session.user.id,
     limit,
+    sessionType,
     startingAfter,
   });
 

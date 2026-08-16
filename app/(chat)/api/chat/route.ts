@@ -14,6 +14,11 @@ import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
+  extractAndStoreMemories,
+  formatMemoriesForPrompt,
+  retrieveRelevantMemories,
+} from "@/lib/ai/memory";
+import {
   allowedModelIds,
   chatModels,
   DEFAULT_CHAT_MODEL,
@@ -21,7 +26,7 @@ import {
   getModelAvailability,
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
+import { getGuestModel, getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
@@ -101,6 +106,14 @@ export async function POST(request: Request) {
     await checkIpRateLimit(ipAddress(request));
 
     const userType: UserType = session.user.type;
+
+    // Debug: log user type to verify guest detection
+    console.log(
+      "[Chat API] User type:",
+      userType,
+      "isGuest:",
+      userType === "guest"
+    );
 
     const messageCount = await getMessageCountByUserId({
       differenceInHours: 1,
@@ -200,7 +213,31 @@ export async function POST(request: Request) {
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
 
+    // Guest users use mock model with reasoning stream
+    const isGuestUser = userType === "guest";
+
     const modelMessages = await convertToModelMessages(uiMessages);
+
+    // Retrieve relevant long-term memories for the user's query
+    let memoryContext: string | undefined;
+    if (message?.role === "user" && !isGuestUser) {
+      try {
+        const userMessageText = message.parts
+          .filter((p) => p.type === "text")
+          .map((p) => ("text" in p ? p.text : ""))
+          .join("");
+
+        if (userMessageText) {
+          const memories = await retrieveRelevantMemories({
+            queryText: userMessageText,
+            userId: session.user.id,
+          });
+          memoryContext = formatMemoriesForPrompt(memories);
+        }
+      } catch (error) {
+        console.error("[Memory] Retrieval failed:", error);
+      }
+    }
 
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {
@@ -262,8 +299,9 @@ export async function POST(request: Request) {
         };
 
         const result = streamText({
-          activeTools:
-            isReasoningModel && !supportsTools
+          activeTools: isGuestUser
+            ? []
+            : isReasoningModel && !supportsTools
               ? []
               : [
                   "getWeather",
@@ -272,9 +310,13 @@ export async function POST(request: Request) {
                   "updateDocument",
                   "requestSuggestions",
                 ],
-          instructions: systemPrompt({ requestHints, supportsTools }),
+          instructions: systemPrompt({
+            memoryContext,
+            requestHints,
+            supportsTools: !isGuestUser && supportsTools,
+          }),
           messages: modelMessages,
-          model: getLanguageModel(chatModel),
+          model: isGuestUser ? getGuestModel() : getLanguageModel(chatModel),
           onAbort() {
             stopWaitingStatus();
           },
@@ -322,7 +364,7 @@ export async function POST(request: Request) {
 
         dataStream.merge(
           toUIMessageStream({
-            sendReasoning: isReasoningModel,
+            sendReasoning: isGuestUser || isReasoningModel,
             stream: result.stream,
           })
         );
@@ -393,6 +435,21 @@ export async function POST(request: Request) {
       },
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
     });
+
+    // Schedule background memory extraction after response is sent
+    if (message?.role === "user" && !isGuestUser) {
+      after(async () => {
+        try {
+          await extractAndStoreMemories({
+            chatId: id,
+            messages: uiMessages,
+            userId: session.user.id,
+          });
+        } catch (error) {
+          console.error("[Memory] Background extraction failed:", error);
+        }
+      });
+    }
 
     return createUIMessageStreamResponse({
       async consumeSseStream({ stream: sseStream }) {

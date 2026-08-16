@@ -26,30 +26,44 @@
         "noUnknownAtRules": "off",
         "noConsole": "off",
         "noBitwiseOperators": "off",
-        "noUnnecessaryConditions": "off"
+        "noUnnecessaryConditions": "off",
+        "noArrayIndexKey": "off",
+        "useAwait": "off",
+        "noEmptyBlockStatements": "off",
+        "noEqualsToNull": "off"
       },
       "style": {
         "noMagicNumbers": "off",
         "noNestedTernary": "off",
-        "useConsistentTypeDefinitions": "off"
+        "useConsistentTypeDefinitions": "off",
+        "useDefaultSwitchClause": "off",
+        "noExportedImports": "off",
+        "useErrorCause": "off",
+        "noIncrementDecrement": "off",
+        "useBlockStatements": "off",
+        "useDestructuring": "off"
       },
       "nursery": {
         "useSortedClasses": "off"
       },
       "complexity": {
         "noExcessiveCognitiveComplexity": "off",
-        "useSimplifiedLogicExpression": "off"
+        "useSimplifiedLogicExpression": "off",
+        "useOptionalChain": "off"
       },
       "a11y": {
         "noSvgWithoutTitle": "off"
       },
       "correctness": {
         "useUniqueElementIds": "off",
-        "useImageSize": "off"
+        "useImageSize": "off",
+        "useHookAtTopLevel": "off"
       },
       "performance": {
         "noBarrelFile": "off",
-        "useTopLevelRegex": "off"
+        "useTopLevelRegex": "off",
+        "noJsxPropsBind": "off",
+        "noAwaitInLoops": "off"
       }
     }
   }

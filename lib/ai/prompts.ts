@@ -66,19 +66,25 @@ About the origin of user's request:
 `;
 
 export const systemPrompt = ({
+  memoryContext,
   requestHints,
   supportsTools,
 }: {
+  memoryContext?: string;
   requestHints: RequestHints;
   supportsTools: boolean;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  if (!supportsTools) {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+  const basePrompt = supportsTools
+    ? `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`
+    : `${regularPrompt}\n\n${requestPrompt}`;
+
+  if (memoryContext) {
+    return `${basePrompt}\n\n${memoryContext}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  return basePrompt;
 };
 
 export const codePrompt = `

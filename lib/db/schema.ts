@@ -2,6 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
+  integer,
   json,
   pgTable,
   primaryKey,
@@ -9,6 +10,7 @@ import {
   timestamp,
   uuid,
   varchar,
+  vector,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("User", {
@@ -28,6 +30,11 @@ export type User = InferSelectModel<typeof user>;
 export const chat = pgTable("Chat", {
   createdAt: timestamp("createdAt").notNull(),
   id: uuid("id").primaryKey().notNull().defaultRandom(),
+  sessionType: varchar("sessionType", {
+    enum: ["chat", "debate", "roundtable", "detective"],
+  })
+    .notNull()
+    .default("chat"),
   title: text("title").notNull(),
   userId: uuid("userId")
     .notNull()
@@ -134,3 +141,22 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+export const memory = pgTable("Memory", {
+  category: varchar("category", { length: 64 }),
+  chatId: uuid("chatId").references(() => chat.id, {
+    onDelete: "cascade",
+  }),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  embedding: vector("embedding", { dimensions: 1536 }),
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  importance: integer("importance").notNull().default(1),
+  summary: text("summary").notNull(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+
+export type Memory = InferSelectModel<typeof memory>;

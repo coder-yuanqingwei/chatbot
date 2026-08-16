@@ -29,3 +29,11 @@ tsconfig.tsbuildinfo
 
 # CatPaw IDE
 .catpaw/
+
+# IDE / tool temp dirs
+.deveco/
+.mastra/
+.qoder/
+
+# temp test files
+test-sidebar.*

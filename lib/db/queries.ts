@@ -11,6 +11,7 @@ import {
   inArray,
   lt,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -23,6 +24,7 @@ import {
   chat,
   type DBMessage,
   document,
+  memory,
   message,
   type Suggestion,
   stream,
@@ -72,19 +74,22 @@ export async function createGuestUser() {
 
 export async function saveChat({
   id,
-  userId,
+  sessionType = "chat",
   title,
+  userId,
   visibility,
 }: {
   id: string;
-  userId: string;
+  sessionType?: "chat" | "debate" | "roundtable" | "detective";
   title: string;
+  userId: string;
   visibility: VisibilityType;
 }) {
   try {
     return await db.insert(chat).values({
       createdAt: new Date(),
       id,
+      sessionType,
       title,
       userId,
       visibility,
@@ -143,25 +148,29 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
 export async function getChatsByUserId({
   id,
   limit,
+  sessionType,
   startingAfter,
   endingBefore,
 }: {
   id: string;
   limit: number;
+  sessionType?: "chat" | "debate" | "roundtable" | "detective";
   startingAfter: string | null;
   endingBefore: string | null;
 }) {
   try {
     const extendedLimit = limit + 1;
 
+    const baseCondition = sessionType
+      ? and(eq(chat.userId, id), eq(chat.sessionType, sessionType))
+      : eq(chat.userId, id);
+
     const query = (whereCondition?: SQL<unknown>) =>
       db
         .select()
         .from(chat)
         .where(
-          whereCondition
-            ? and(whereCondition, eq(chat.userId, id))
-            : eq(chat.userId, id)
+          whereCondition ? and(whereCondition, baseCondition) : baseCondition
         )
         .orderBy(desc(chat.createdAt))
         .limit(extendedLimit);
@@ -585,6 +594,113 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
       .execute();
 
     return streamIds.map(({ id }) => id);
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function saveMemory({
+  category,
+  chatId,
+  content,
+  embedding,
+  importance,
+  summary,
+  userId,
+}: {
+  category: string | null;
+  chatId: string | null;
+  content: string;
+  embedding: number[] | null;
+  importance: number;
+  summary: string;
+  userId: string;
+}) {
+  try {
+    return await db.insert(memory).values({
+      category,
+      chatId,
+      content,
+      embedding,
+      importance,
+      summary,
+      userId,
+    });
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export type RetrievedMemory = {
+  id: string;
+  content: string;
+  summary: string;
+  category: string | null;
+  importance: number;
+  createdAt: Date;
+  similarity: number;
+};
+
+export async function searchMemories({
+  embedding,
+  limit = 5,
+  threshold = 0.3,
+  userId,
+}: {
+  embedding: number[];
+  limit?: number;
+  threshold?: number;
+  userId: string;
+}) {
+  try {
+    const embeddingStr = `[${embedding.join(",")}]`;
+    const results = await db.execute(sql`
+      SELECT "id", "content", "summary", "category", "importance", "createdAt",
+             1 - ("embedding" <=> ${embeddingStr}::vector) AS "similarity"
+      FROM "Memory"
+      WHERE "userId" = ${userId}
+        AND "embedding" IS NOT NULL
+        AND 1 - ("embedding" <=> ${embeddingStr}::vector) > ${threshold}
+      ORDER BY "embedding" <=> ${embeddingStr}::vector
+      LIMIT ${limit}
+    `);
+
+    return results as unknown as RetrievedMemory[];
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getMemoriesByUserId({
+  limit = 50,
+  userId,
+}: {
+  limit?: number;
+  userId: string;
+}) {
+  try {
+    return await db
+      .select()
+      .from(memory)
+      .where(eq(memory.userId, userId))
+      .orderBy(desc(memory.createdAt))
+      .limit(limit);
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function deleteMemoriesByChatId({ chatId }: { chatId: string }) {
+  try {
+    return await db.delete(memory).where(eq(memory.chatId, chatId));
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function deleteMemoriesByUserId({ userId }: { userId: string }) {
+  try {
+    return await db.delete(memory).where(eq(memory.userId, userId));
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
   }

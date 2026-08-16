@@ -5,6 +5,7 @@ import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
+import { ReasoningBubble } from "../ai-elements/reasoning-bubble";
 import { Shimmer } from "../ai-elements/shimmer";
 import {
   Tool,
@@ -13,12 +14,14 @@ import {
   ToolInput,
   ToolOutput,
 } from "../ai-elements/tool";
-import { useDataStream } from "./data-stream-provider";
+import {
+  type ReasoningStreamChunk,
+  useDataStream,
+} from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
-import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
 
@@ -155,6 +158,24 @@ const PurePreviewMessage = ({
     { isStreaming: false, rendered: false, text: "" }
   ) ?? { isStreaming: false, rendered: false, text: "" };
 
+  const reasoningChunks: ReasoningStreamChunk[] = (() => {
+    if (!mergedReasoning.text) {
+      return [];
+    }
+    const segments = mergedReasoning.text
+      .split(/\n+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    return segments.map((segment, index) => ({
+      id: `${message.id}-reasoning-${index}`,
+      isComplete: !mergedReasoning.isStreaming,
+      messageId: message.id,
+      sequence: index + 1,
+      text: segment,
+      timestamp: Date.now(),
+    }));
+  })();
+
   const parts = message.parts?.map((part, index) => {
     const { type } = part;
     const key = `message-${message.id}-part-${index}`;
@@ -163,10 +184,10 @@ const PurePreviewMessage = ({
       if (!mergedReasoning.rendered && mergedReasoning.text) {
         mergedReasoning.rendered = true;
         return (
-          <MessageReasoning
-            isLoading={isLoading || mergedReasoning.isStreaming}
+          <ReasoningBubble
+            chunks={reasoningChunks}
+            isStreaming={isLoading || mergedReasoning.isStreaming}
             key={key}
-            reasoning={mergedReasoning.text}
           />
         );
       }

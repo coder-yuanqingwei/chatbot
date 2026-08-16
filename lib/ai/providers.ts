@@ -32,6 +32,12 @@ export function getLanguageModel(modelId: string) {
   return deepseek("deepseek-v4-flash");
 }
 
+export function getGuestModel() {
+  console.log("[Providers] getGuestModel() called - using guest mock model");
+  const { createGuestModel } = require("./models.guest");
+  return createGuestModel();
+}
+
 export function getTitleModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
@@ -39,4 +45,9 @@ export function getTitleModel() {
 
   // Use DeepSeek v4-flash for title generation
   return deepseek("deepseek-v4-flash");
+}
+
+export function getGuestTitleModel() {
+  const { createGuestTitleModel } = require("./models.guest");
+  return createGuestTitleModel();
 }
