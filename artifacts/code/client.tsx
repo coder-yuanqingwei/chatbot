@@ -17,7 +17,34 @@ import {
 } from "@/components/chat/icons";
 import { generateUUID } from "@/lib/utils";
 
-const OUTPUT_HANDLERS = {
+type CodeLanguage = "python" | "javascript" | "typescript";
+
+function detectLanguage(code: string): CodeLanguage {
+  if (
+    code.trimStart().startsWith("#") ||
+    (code.includes("def ") && code.includes(":")) ||
+    (code.includes("from ") && code.includes(" import ")) ||
+    (code.includes("import ") && code.includes("print(")) ||
+    code.includes("elif ") ||
+    code.includes("elif(")
+  ) {
+    return "python";
+  }
+  if (
+    /:\s*(string|number|boolean)\b/.test(code) ||
+    code.includes("interface ") ||
+    (code.includes("type ") && code.includes("=")) ||
+    code.includes(" as string") ||
+    code.includes(" as number") ||
+    (/<[A-Z]\w*>/.test(code) && code.includes("=>"))
+  ) {
+    return "typescript";
+  }
+
+  return "javascript";
+}
+
+const PYTHON_OUTPUT_HANDLERS = {
   basic: `
     # Basic output capture setup
   `,
@@ -53,7 +80,7 @@ const OUTPUT_HANDLERS = {
   `,
 };
 
-function detectRequiredHandlers(code: string): string[] {
+function detectRequiredPythonHandlers(code: string): string[] {
   const handlers: string[] = ["basic"];
 
   if (code.includes("matplotlib") || code.includes("plt.")) {
@@ -61,6 +88,157 @@ function detectRequiredHandlers(code: string): string[] {
   }
 
   return handlers;
+}
+
+function executeJavaScript(
+  code: string,
+  onOutput: (output: ConsoleOutputContent) => void,
+  isTS = false
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const workerCode = `
+      self.onmessage = async function(e) {
+        self.console.log = function(...args) {
+          self.postMessage({ type: 'text', value: args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ') });
+        };
+        self.console.error = function(...args) {
+          self.postMessage({ type: 'text', value: '\\u274C ' + args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ') });
+        };
+        self.console.warn = function(...args) {
+          self.postMessage({ type: 'text', value: '\\u26A0 ' + args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ') });
+        };
+        self.console.info = function(...args) {
+          self.postMessage({ type: 'text', value: args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' ') });
+        };
+
+        try {
+          let code = e.data;
+          ${
+            isTS
+              ? `
+          try {
+            const sucrase = await import('https://esm.sh/sucrase@3.35.1');
+            const result = sucrase.transform(code, { transforms: ['typescript'] });
+            code = result.code;
+          } catch (transpileErr) {
+            self.postMessage({ type: 'error', value: 'TypeScript transpilation failed: ' + (transpileErr.message || String(transpileErr)) });
+            return;
+          }
+          `
+              : ""
+          }
+          const result = eval(code);
+          if (result !== undefined) {
+            self.postMessage({ type: 'text', value: typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result) });
+          }
+          self.postMessage({ type: 'done' });
+        } catch (error) {
+          self.postMessage({ type: 'error', value: error.message || String(error) });
+        }
+      };
+    `;
+
+    const blob = new Blob([workerCode], { type: "application/javascript" });
+    const url = URL.createObjectURL(blob);
+    const worker = new Worker(url);
+
+    const timeout = setTimeout(() => {
+      worker.terminate();
+      URL.revokeObjectURL(url);
+      reject(new Error("Execution timed out (10s)"));
+    }, 10_000);
+
+    worker.onmessage = (e) => {
+      const data = e.data;
+      if (data.type === "done") {
+        clearTimeout(timeout);
+        worker.terminate();
+        URL.revokeObjectURL(url);
+        resolve();
+      } else if (data.type === "error") {
+        clearTimeout(timeout);
+        worker.terminate();
+        URL.revokeObjectURL(url);
+        reject(new Error(data.value));
+      } else {
+        onOutput({ type: data.type as "text" | "image", value: data.value });
+      }
+    };
+
+    worker.onerror = (e) => {
+      clearTimeout(timeout);
+      worker.terminate();
+      URL.revokeObjectURL(url);
+      reject(new Error(e.message || "Worker error"));
+    };
+
+    worker.postMessage(code);
+  });
+}
+
+async function executeTypeScript(
+  code: string,
+  onOutput: (output: ConsoleOutputContent) => void
+): Promise<void> {
+  return executeJavaScript(code, onOutput, true);
+}
+
+async function executePython(
+  code: string,
+  setMetadata: (fn: (m: Metadata) => Metadata) => void,
+  runId: string,
+  outputContent: ConsoleOutputContent[]
+): Promise<void> {
+  // @ts-expect-error - loadPyodide is not defined
+  const currentPyodideInstance = await globalThis.loadPyodide({
+    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/",
+  });
+
+  currentPyodideInstance.setStdout({
+    batched: (output: string) => {
+      outputContent.push({
+        type: output.startsWith("data:image/png;base64") ? "image" : "text",
+        value: output,
+      });
+    },
+  });
+
+  await currentPyodideInstance.loadPackagesFromImports(code, {
+    messageCallback: (message: string) => {
+      setMetadata((metadata) => ({
+        ...metadata,
+        outputs: [
+          ...metadata.outputs.filter((output) => output.id !== runId),
+          {
+            contents: [{ type: "text", value: message }],
+            id: runId,
+            status: "loading_packages",
+          },
+        ],
+      }));
+    },
+  });
+
+  const requiredHandlers = detectRequiredPythonHandlers(code);
+  await requiredHandlers.reduce<Promise<void>>(async (previous, handler) => {
+    await previous;
+
+    if (
+      !PYTHON_OUTPUT_HANDLERS[handler as keyof typeof PYTHON_OUTPUT_HANDLERS]
+    ) {
+      return;
+    }
+
+    await currentPyodideInstance.runPythonAsync(
+      PYTHON_OUTPUT_HANDLERS[handler as keyof typeof PYTHON_OUTPUT_HANDLERS]
+    );
+
+    if (handler === "matplotlib") {
+      await currentPyodideInstance.runPythonAsync("setup_matplotlib_output()");
+    }
+  }, Promise.resolve());
+
+  await currentPyodideInstance.runPythonAsync(code);
 }
 
 type Metadata = {
@@ -115,61 +293,19 @@ export const codeArtifact = new Artifact<"code", Metadata>({
         }));
 
         try {
-          // @ts-expect-error - loadPyodide is not defined
-          const currentPyodideInstance = await globalThis.loadPyodide({
-            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/",
-          });
+          const lang = detectLanguage(content);
 
-          currentPyodideInstance.setStdout({
-            batched: (output: string) => {
-              outputContent.push({
-                type: output.startsWith("data:image/png;base64")
-                  ? "image"
-                  : "text",
-                value: output,
-              });
-            },
-          });
-
-          await currentPyodideInstance.loadPackagesFromImports(content, {
-            messageCallback: (message: string) => {
-              setMetadata((metadata) => ({
-                ...metadata,
-                outputs: [
-                  ...metadata.outputs.filter((output) => output.id !== runId),
-                  {
-                    contents: [{ type: "text", value: message }],
-                    id: runId,
-                    status: "loading_packages",
-                  },
-                ],
-              }));
-            },
-          });
-
-          const requiredHandlers = detectRequiredHandlers(content);
-          await requiredHandlers.reduce<Promise<void>>(
-            async (previous, handler) => {
-              await previous;
-
-              if (!OUTPUT_HANDLERS[handler as keyof typeof OUTPUT_HANDLERS]) {
-                return;
-              }
-
-              await currentPyodideInstance.runPythonAsync(
-                OUTPUT_HANDLERS[handler as keyof typeof OUTPUT_HANDLERS]
-              );
-
-              if (handler === "matplotlib") {
-                await currentPyodideInstance.runPythonAsync(
-                  "setup_matplotlib_output()"
-                );
-              }
-            },
-            Promise.resolve()
-          );
-
-          await currentPyodideInstance.runPythonAsync(content);
+          if (lang === "typescript") {
+            await executeTypeScript(content, (output) => {
+              outputContent.push(output);
+            });
+          } else if (lang === "javascript") {
+            await executeJavaScript(content, (output) => {
+              outputContent.push(output);
+            });
+          } else {
+            await executePython(content, setMetadata, runId, outputContent);
+          }
 
           setMetadata((metadata) => ({
             ...metadata,
@@ -242,7 +378,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
   ],
   content: codeArtifactContent,
   description:
-    "Useful for code generation; Code execution is only available for python code.",
+    "Useful for code generation. Supports Python (via Pyodide), JavaScript, and TypeScript (via browser execution).",
   initialize: ({ setMetadata }) => {
     setMetadata({
       outputs: [],
