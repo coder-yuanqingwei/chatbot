@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: import.meta.dirname,
   ...(basePath
     ? {
         assetPrefix: "/demo-assets",

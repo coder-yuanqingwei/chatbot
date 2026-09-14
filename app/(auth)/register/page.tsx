@@ -26,16 +26,16 @@ export default function Page() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
     if (state.status === "user_exists") {
-      toast({ description: t("accountExists"), type: "error" });
+      toast({ description: t("auth.account_exists"), type: "error" });
     } else if (state.status === "failed") {
-      toast({ description: t("createAccountFailed"), type: "error" });
+      toast({ description: t("auth.create_failed"), type: "error" });
     } else if (state.status === "invalid_data") {
       toast({
-        description: t("validationFailed"),
+        description: t("auth.validation_failed"),
         type: "error",
       });
     } else if (state.status === "success") {
-      toast({ description: t("accountCreated"), type: "success" });
+      toast({ description: t("auth.account_created"), type: "success" });
       setIsSuccessful(true);
       updateSession();
       router.refresh();
@@ -50,18 +50,20 @@ export default function Page() {
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">
-        {t("createAccount")}
+        {t("auth.create_account")}
       </h1>
-      <p className="text-sm text-muted-foreground">{t("getStartedFree")}</p>
+      <p className="text-sm text-muted-foreground">{t("auth.get_started")}</p>
       <AuthForm action={handleSubmit} defaultEmail={email}>
-        <SubmitButton isSuccessful={isSuccessful}>{t("signUp")}</SubmitButton>
+        <SubmitButton isSuccessful={isSuccessful}>
+          {t("auth.sign_up")}
+        </SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
-          {t("haveAccount")}
+          {t("auth.have_account")}
           <Link
             className="text-foreground underline-offset-4 hover:underline"
             href="/login"
           >
-            {t("signIn")}
+            {t("auth.sign_in")}
           </Link>
         </p>
       </AuthForm>
