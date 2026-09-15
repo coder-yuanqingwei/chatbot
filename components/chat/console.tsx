@@ -166,11 +166,9 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
                 </div>
               ) : (
                 <div className="no-scrollbar flex w-full min-w-0 flex-col gap-2 overflow-x-auto text-foreground">
-                  {consoleOutput.contents.map((content) =>
+                  {consoleOutput.contents.map((content, i) =>
                     content.type === "image" ? (
-                      <picture
-                        key={`${consoleOutput.id}-img-${content.value.slice(0, 32)}`}
-                      >
+                      <picture key={`${consoleOutput.id}-img-${i}`}>
                         <img
                           alt="output"
                           className="max-w-full rounded-md"
@@ -180,7 +178,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
                     ) : (
                       <div
                         className="w-full whitespace-pre-line break-words"
-                        key={`${consoleOutput.id}-txt-${content.value.slice(0, 32)}`}
+                        key={`${consoleOutput.id}-txt-${i}`}
                       >
                         {content.value}
                       </div>

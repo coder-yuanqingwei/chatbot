@@ -1,10 +1,26 @@
-export const DEFAULT_CHAT_MODEL = "deepseek/deepseek-v4-flash";
+const isCustomAPI = !!(
+  process.env.CUSTOM_API_URL && process.env.CUSTOM_API_KEY
+);
+
+const modelName = isCustomAPI
+  ? (process.env.CUSTOM_MODEL_NAME ?? "default")
+  : "deepseek-v4-flash";
+
+const providerName = isCustomAPI
+  ? (process.env.CUSTOM_API_URL ?? "").replace(/https?:\/\//, "").split("/")[0]
+  : "deepseek";
+
+export const DEFAULT_CHAT_MODEL = isCustomAPI
+  ? `custom/${modelName}`
+  : "deepseek/deepseek-v4-flash";
 
 export const titleModel = {
-  description: "Fast model for title generation",
-  id: "deepseek/deepseek-v4-flash",
-  name: "DeepSeek V4 Flash",
-  provider: "deepseek",
+  description: isCustomAPI
+    ? `Custom model: ${modelName}`
+    : "Fast model for title generation",
+  id: DEFAULT_CHAT_MODEL,
+  name: isCustomAPI ? modelName : "DeepSeek V4 Flash",
+  provider: providerName,
 };
 
 export type ModelCapabilities = {
@@ -24,10 +40,12 @@ export type ChatModel = {
 
 export const chatModels: ChatModel[] = [
   {
-    description: "Fast and capable model with tool use",
-    id: "deepseek/deepseek-v4-flash",
-    name: "DeepSeek V4 Flash",
-    provider: "deepseek",
+    description: isCustomAPI
+      ? `Custom API model: ${modelName}`
+      : "Fast and capable model with tool use",
+    id: DEFAULT_CHAT_MODEL,
+    name: isCustomAPI ? modelName : "DeepSeek V4 Flash",
+    provider: providerName,
   },
 ];
 

@@ -17,19 +17,39 @@ export const myProvider = isTestEnvironment
     })()
   : null;
 
-// DeepSeek provider - direct API access via OpenAI-compatible endpoint
-const deepseek = createOpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY ?? "",
-  baseURL: "https://api.deepseek.com/v1",
-});
+const customAPIURL = process.env.CUSTOM_API_URL;
+const customAPIKey = process.env.CUSTOM_API_KEY;
+const customModelName = process.env.CUSTOM_MODEL_NAME ?? "default";
+
+function createProvider() {
+  if (customAPIURL && customAPIKey) {
+    return createOpenAI({
+      apiKey: customAPIKey,
+      baseURL: customAPIURL,
+    });
+  }
+
+  return createOpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY ?? "",
+    baseURL: "https://api.deepseek.com/v1",
+  });
+}
+
+const provider = createProvider();
+
+export function getModelName(): string {
+  if (customAPIURL && customAPIKey) {
+    return customModelName;
+  }
+  return "deepseek-v4-flash";
+}
 
 export function getLanguageModel(modelId: string) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
   }
 
-  // Use DeepSeek v4-flash for all models
-  return deepseek("deepseek-v4-flash");
+  return provider(getModelName());
 }
 
 export function getGuestModel() {
@@ -43,8 +63,7 @@ export function getTitleModel() {
     return myProvider.languageModel("title-model");
   }
 
-  // Use DeepSeek v4-flash for title generation
-  return deepseek("deepseek-v4-flash");
+  return provider(getModelName());
 }
 
 export function getGuestTitleModel() {
